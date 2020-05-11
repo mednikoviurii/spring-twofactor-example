@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
+import tech.mednikov.webflux2fademo.errors.AlreadyExistsException;
+import tech.mednikov.webflux2fademo.errors.LoginDeniedException;
 import tech.mednikov.webflux2fademo.managers.TokenManager;
 import tech.mednikov.webflux2fademo.managers.TotpManager;
 import tech.mednikov.webflux2fademo.models.*;
@@ -17,7 +19,6 @@ public class AuthServiceImpl implements AuthService{
     private TotpManager totpManager;
     private UserRepository repository;
 
-
     @Override
     public Mono<SignupResponse> signup(SignupRequest request) {
 
@@ -26,7 +27,6 @@ public class AuthServiceImpl implements AuthService{
         String salt = BCrypt.gensalt();
         String hash = BCrypt.hashpw(password, salt);
         String secret = totpManager.generateSecret();
-
         User user = new User(null, email, hash, salt, secret);
 
         Mono<SignupResponse> response = repository.findByEmail(email)
@@ -36,17 +36,11 @@ public class AuthServiceImpl implements AuthService{
                         return repository.save(result).flatMap(result2 -> {
                             String userId = result2.getUserId();
                             String token = tokenManager.issueToken(userId);
-                            SignupResponse signupResponse = new SignupResponse();
-                            signupResponse.setUserId(userId);
-                            signupResponse.setSecretKey(secret);
-                            signupResponse.setToken(token);
-                            signupResponse.setSuccess(true);
+                            SignupResponse signupResponse = new SignupResponse(userId, token, secret);
                             return Mono.just(signupResponse);
                         });
                     } else {
-                        SignupResponse signupResponse = new SignupResponse();
-                        signupResponse.setSuccess(false);
-                        return Mono.just(signupResponse);
+                        return Mono.error(new AlreadyExistsException());
                     }
                 });
         return response;
@@ -62,9 +56,7 @@ public class AuthServiceImpl implements AuthService{
                 .flatMap(user -> {
                     if (user.getUserId() == null) {
                         // no user
-                        LoginResponse loginResponse = new LoginResponse();
-                        loginResponse.setSuccess(false);
-                        return Mono.just(loginResponse);
+                        return Mono.empty();
                     } else {
                         // user exists
                         String salt = user.getSalt();
@@ -76,19 +68,14 @@ public class AuthServiceImpl implements AuthService{
                             if (codeMatched) {
                                 String token = tokenManager.issueToken(user.getUserId());
                                 LoginResponse loginResponse = new LoginResponse();
-                                loginResponse.setSuccess(true);
                                 loginResponse.setToken(token);
                                 loginResponse.setUserId(user.getUserId());
                                 return Mono.just(loginResponse);
                             } else {
-                                LoginResponse loginResponse = new LoginResponse();
-                                loginResponse.setSuccess(false);
-                                return Mono.just(loginResponse);
+                                return Mono.error(new LoginDeniedException());
                             }
                         } else {
-                            LoginResponse loginResponse = new LoginResponse();
-                            loginResponse.setSuccess(false);
-                            return Mono.just(loginResponse);
+                            return Mono.error(new LoginDeniedException());
                         }
                     }
                 });

@@ -50,7 +50,6 @@ class AuthServiceImplTest {
 
         StepVerifier.create(service.login(request))
                 .assertNext(result -> Assertions.assertThat(result)
-                        .hasFieldOrPropertyWithValue("success", true)
                         .hasFieldOrPropertyWithValue("token", "token")
                         .hasFieldOrPropertyWithValue("userId", "userId"))
                 .verifyComplete();
@@ -65,9 +64,7 @@ class AuthServiceImplTest {
 
         Mockito.when(repository.findByEmail("john.doe@mail.com")).thenReturn(Mono.empty());
 
-        StepVerifier.create(service.login(request))
-                .assertNext(result -> Assertions.assertThat(result.isSuccess()).isFalse())
-                .verifyComplete();
+        StepVerifier.create(service.login(request)).expectError();
     }
 
     @Test
@@ -89,7 +86,6 @@ class AuthServiceImplTest {
         StepVerifier.create(service.signup(request))
                 .assertNext(result -> Assertions.assertThat(result)
                         .hasFieldOrPropertyWithValue("userId", "userId")
-                        .hasFieldOrPropertyWithValue("success", true)
                         .hasFieldOrPropertyWithValue("token", "token")
                         .hasFieldOrPropertyWithValue("secretKey", "secretkey"))
                 .verifyComplete();
@@ -108,8 +104,6 @@ class AuthServiceImplTest {
 
         Mockito.when(repository.findByEmail("john.doe@mail.com")).thenReturn(Mono.just(user));
 
-        StepVerifier.create(service.signup(request))
-                .assertNext(result -> Assertions.assertThat(result.isSuccess()).isFalse())
-                .verifyComplete();
+        StepVerifier.create(service.signup(request)).expectError();
     }
 }
