@@ -12,4 +12,6 @@ public interface AuthService {
 
     Mono<LoginResponse> login (LoginRequest request);
 
+    Mono<String> parseToken (String token);
+
 }

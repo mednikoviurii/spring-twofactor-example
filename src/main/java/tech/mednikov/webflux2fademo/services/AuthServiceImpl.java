@@ -81,4 +81,9 @@ public class AuthServiceImpl implements AuthService{
                 });
         return response;
     }
+
+    @Override
+    public Mono<String> parseToken(String token) {
+        return tokenManager.parse(token);
+    }
 }

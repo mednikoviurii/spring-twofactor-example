@@ -20,4 +20,12 @@ public class Router {
                 .route(POST("/auth/signup").and(accept(json)), handler::signup)
                 .andRoute(POST("/auth/login").and(accept(json)), handler::login);
     }
+
+    @Bean
+    public RouterFunction<ServerResponse> protectedEndpoint (ProtectedHandler handler,
+                                                             AuthFunction authFunction){
+        return RouterFunctions
+                .route(GET("/secured/hello").and(accept(json)), handler::sayHello)
+                .filter(authFunction::filter);
+    }
 }
